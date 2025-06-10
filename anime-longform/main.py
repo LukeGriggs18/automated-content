@@ -8,19 +8,44 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 client = OpenAI()
 
-def generate_title(prompt):
+def generate_text(system_prompt, prompt, temp):
     response = client.responses.create(
         model="gpt-4.1",
-        input=prompt,
-        temperature=1.0,
-        top_p=1.0
+        input=[
+            {
+                "role":"system", 
+                "content": [
+                    {
+                    "type": "input_text",
+                    "text": system_prompt
+                    }
+                ]
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                    "type": "input_text",
+                    "text": prompt
+                    }
+                ]
+            },
+
+        ],
+        temperature=temp,
     )
     return response.output_text
 
+title_system_prompt = "You generate short, memorable, and emotionally resonant video titles. Each title is designed to intrigue and inspire, often using metaphor, contradiction, or impactful phrasing. You focus on engaging the viewer, grabbing their interest by resonating with them personally. \n\nRESPONSE:\nYou produce outputs with one title\nYou do not inlcude quotation marks\nEach title ends with a period (.)"
 title_prompt = "invent a concise, impactful title for a motivational video. Be creative with the output. The title should be short and concise followed by a peroid (.). Relate it to any themes in the realm of personal development, suffering, success, life and any other similar topics. Make the prompt personal, call out the viewer, make it"
-script_prompt = "Write a 1-minute motivational script for a YouTube channel.Do not include any instructions on audio or video. Your only job is to write the script. Only include the words to be spoken by the narrator. The tone should be thoughtful, inspiring, and slightly philosophical. Focus on the idea that real growth often comes from embracing discomfort and uncertainty, and that the struggle itself is what shapes us into stronger, better versions of ourselves. Use vivid imagery and a calm, reflective voice."
+title = generate_text(title_system_prompt, title_prompt, 1.7)
 
-title = generate_title(title_prompt)
-#script = generate(script_prompt)
+script_system_prompt ="You are a thoughtful, powerfull narrator who writes short motivational scripts designed to inspire deep personal reflection. Your style is calm, introspective, and emotionally resonant. You focus on motivating the listener. Your flow is rhythmic capturing the listener. You write in a emagogic oratorical style. You use concise storytelling to communicate powerful ideas about growth, discipline, discomfort, and transformation. RESPONSE: Aim to produce scripts that are about 1 minute long when spoken. The response should only include the script, no additional information. Do not use archaiec language. Your response it being sent to a text to speach model (elevenlabs) so only use punctuation to dicatate the tempo."
+script_prompt = "Create a script focussing on hard work and personal growth. The script will be used for a youtube channel, it should have an engaging opening that draws to a conclusion throughout. Focus on personal growth, suffering, success, hardwork and other similiar topics as you see fit."
+script = generate_text(script_system_prompt, script_system_prompt, 1.0)
 
+print("title:")
 print(title)
+print("------------------------")
+print("script:")
+print(script)
