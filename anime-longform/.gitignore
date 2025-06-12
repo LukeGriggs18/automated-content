@@ -1,2 +1,14 @@
-*srt
-*mp3
+# Ignore Python cache directories
+__pycache__/
+
+# Ignore all compiled Python files (*.pyc, *.pyo, *.pyd)
+*.py[cod]
+
+# Ignore output files and folders
+*.srt
+*.mp3
+*.mp4
+/output/
+
+# Ignore __pycache__ folders inside utils (and subfolders)
+utils/__pycache__/

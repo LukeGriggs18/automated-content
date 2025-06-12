@@ -2,6 +2,8 @@ import ffmpeg
 import traceback
 
 
+
+
 def seconds_to_srt_timestamp(seconds):
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
@@ -59,29 +61,36 @@ def generate_srt_from_alignment(alignment, output_file="subtitles.srt", max_word
 
 def burn_subtitles(audio_path, subtitle_path, output_path="output/final_video.mp4", background_image="black.jpg", duration=60):
     try:
-        # Step 1: Load background image as video
-        video = ffmpeg.input(background_image, loop=1, framerate=25, t=duration)
+        # Step 1: Load background image as video and scale
+        video_input = ffmpeg.input(background_image, loop=1, framerate=25, t=duration)
+        scaled_video = video_input.filter('scale', 'trunc(iw/2)*2', 'trunc(ih/2)*2')
 
-        # Step 2: Load audio and subtitles
+        # Step 2: Burn subtitles
+        video_with_subs = scaled_video.filter('subtitles', subtitle_path, force_style='Alignment=2')
+
+        # Step 3: Load audio
         audio = ffmpeg.input(audio_path)
 
-        # Step 3: Burn subtitles into video
-        out = (
+        # Step 4: Output combined video and audio
+        (
             ffmpeg
             .output(
-                video.video.filter("subtitles", subtitle_path),
-                audio.audio,
+                video_with_subs,  # Video stream after subtitles
+                audio.audio,      # Audio stream
                 output_path,
                 vcodec='libx264',
                 acodec='aac',
-                b='3000k',
+                **{'b:v': '3000k', 'b:a': '192k'},
                 shortest=None,
                 pix_fmt='yuv420p'
             )
             .overwrite_output()
             .run()
         )
+
         print(f"Final video with subtitles saved to {output_path}")
+
     except Exception as e:
         print("FFmpeg error:")
         traceback.print_exc()
+
