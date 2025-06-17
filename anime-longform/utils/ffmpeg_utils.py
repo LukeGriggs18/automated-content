@@ -2,16 +2,7 @@ import ffmpeg
 import traceback
 
 
-
-
-def seconds_to_srt_timestamp(seconds):
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    milliseconds = int((seconds - int(seconds)) * 1000)
-    return f"{hours:02}:{minutes:02}:{secs:02},{milliseconds:03}"
-
-def generate_srt_from_alignment(alignment, output_file="subtitles.srt", max_words_per_line=4):
+def generate_ass_from_alignment(alignment, output_file="subtitles.ass", max_words_per_line=4):
     chars = alignment.characters
     starts = alignment.character_start_times_seconds
     ends = alignment.character_end_times_seconds
@@ -34,63 +25,66 @@ def generate_srt_from_alignment(alignment, output_file="subtitles.srt", max_word
     if current_word:
         words.append({"word": current_word, "start": word_start, "end": word_end})
 
-    srt_lines = []
-    line_words, line_start = [], None
+    # ASS header with centered alignment
+    header = """[Script Info]
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
 
-    for i, w in enumerate(words):
-        if not line_words:
-            line_start = w["start"]
-        line_words.append(w["word"])
-        line_end = w["end"]
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,36,&H00FFFFFF,&H000000FF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,2,0,5,10,10,30,1
 
-        if len(line_words) >= max_words_per_line or i == len(words) - 1:
-            srt_lines.append({
-                "start": line_start,
-                "end": line_end,
-                "text": " ".join(line_words)
-            })
-            line_words, line_start = [], None
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+
+    def format_ass_timestamp(seconds):
+        h = int(seconds // 3600)
+        m = int((seconds % 3600) // 60)
+        s = int(seconds % 60)
+        cs = int((seconds - int(seconds)) * 100)  # centiseconds
+        return f"{h:01}:{m:02}:{s:02}.{cs:02}"
 
     with open(output_file, "w", encoding="utf-8") as f:
-        for idx, entry in enumerate(srt_lines, 1):
-            f.write(f"{idx}\n")
-            f.write(f"{seconds_to_srt_timestamp(entry['start'])} --> {seconds_to_srt_timestamp(entry['end'])}\n")
-            f.write(f"{entry['text']}\n\n")
+        f.write(header)
 
-    print(f"SRT saved to {output_file}")
+        line_words, line_start = [], None
+        for i, w in enumerate(words):
+            if not line_words:
+                line_start = w["start"]
+            line_words.append(w["word"])
+            line_end = w["end"]
 
-def burn_subtitles(audio_path, subtitle_path, output_path="output/final_video.mp4", background_image="black.jpg", duration=60):
+            if len(line_words) >= max_words_per_line or i == len(words) - 1:
+                text = " ".join(line_words)
+                start = format_ass_timestamp(line_start)
+                end = format_ass_timestamp(line_end)
+                f.write(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text}\n")
+                line_words, line_start = [], None
+
+    print(f"ASS subtitles saved to {output_file}")
+
+
+def burn_subtitles(audio_path, subtitle_path, output_path, video_path):
     try:
-        # Step 1: Load background image as video and scale
-        video_input = ffmpeg.input(background_image, loop=1, framerate=25, t=duration)
-        scaled_video = video_input.filter('scale', 'trunc(iw/2)*2', 'trunc(ih/2)*2')
+        input_video = ffmpeg.input(video_path)
+        input_audio = ffmpeg.input(audio_path)
 
-        # Step 2: Burn subtitles
-        video_with_subs = scaled_video.filter('subtitles', subtitle_path, force_style='Alignment=2')
-
-        # Step 3: Load audio
-        audio = ffmpeg.input(audio_path)
-
-        # Step 4: Output combined video and audio
         (
             ffmpeg
             .output(
-                video_with_subs,  # Video stream after subtitles
-                audio.audio,      # Audio stream
+                input_video, input_audio,
                 output_path,
-                vcodec='libx264',
+                vf=f"ass={subtitle_path}",
                 acodec='aac',
-                **{'b:v': '3000k', 'b:a': '192k'},
-                shortest=None,
-                pix_fmt='yuv420p'
+                shortest=None
             )
             .overwrite_output()
-            .run()
+            .run(capture_stdout=True, capture_stderr=True)
         )
+    except ffmpeg.Error as e:
+        print("FFmpeg stderr:\n", e.stderr.decode())
+        raise RuntimeError("ffmpeg failed")
 
-        print(f"Final video with subtitles saved to {output_path}")
-
-    except Exception as e:
-        print("FFmpeg error:")
-        traceback.print_exc()
 
