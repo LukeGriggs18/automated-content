@@ -33,7 +33,7 @@ PlayResY: 720
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,36,&H00FFFFFF,&H000000FF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,2,0,5,10,10,30,1
+Style: Default,Arial,24,&H00FFFFFF,&H000000FF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,2,0,5,10,10,30,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -69,16 +69,23 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 def burn_subtitles(audio_path, subtitle_path, output_path, video_path):
     try:
         input_video = ffmpeg.input(video_path)
-        input_audio = ffmpeg.input(audio_path)
+        input_voiceover = ffmpeg.input(audio_path)
 
+        # Create filter for mixing audio
+        mixed_audio = ffmpeg.filter([input_video.audio, input_voiceover.audio], 
+                                  'amix', 
+                                  inputs=2, 
+                                  duration='longest')
+
+        # Burn subtitles and combine streams
         (
             ffmpeg
             .output(
-                input_video, input_audio,
+                input_video.video,
+                mixed_audio,
                 output_path,
                 vf=f"ass={subtitle_path}",
-                acodec='aac',
-                shortest=None
+                acodec='aac'
             )
             .overwrite_output()
             .run(capture_stdout=True, capture_stderr=True)
@@ -86,5 +93,40 @@ def burn_subtitles(audio_path, subtitle_path, output_path, video_path):
     except ffmpeg.Error as e:
         print("FFmpeg stderr:\n", e.stderr.decode())
         raise RuntimeError("ffmpeg failed")
+
+
+def add_audio_to_video(video_path, audio_path, output_path):
+    """
+    Add an audio track to a video clip using ffmpeg.
+    
+    Args:
+        video_path (str): Path to the input video file
+        audio_path (str): Path to the audio file to add
+        output_path (str): Path where the output video will be saved
+    """
+    try:
+        input_video = ffmpeg.input(video_path)
+        input_audio = ffmpeg.input(audio_path)
+
+        # Mix the audio tracks with the video
+        (
+            ffmpeg
+            .output(
+                input_video,
+                input_audio,
+                output_path,
+                acodec='aac',
+                map=0,  # Map all streams from first input (video)
+                map_metadata=0,  # Map metadata from first input
+                shortest=None,  # End when shortest input ends
+                vcodec='copy'  # Copy video codec to avoid re-encoding
+            )
+            .overwrite_output()
+            .run(capture_stdout=True, capture_stderr=True)
+        )
+        print(f"Successfully added audio to video. Output saved at: {output_path}")
+    except ffmpeg.Error as e:
+        print("FFmpeg stderr:\n", e.stderr.decode())
+        raise RuntimeError("ffmpeg failed to add audio to video")
 
 
