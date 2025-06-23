@@ -2,7 +2,7 @@ import ffmpeg
 import traceback
 
 
-def generate_ass_from_alignment(alignment, output_file="subtitles.ass", max_words_per_line=4):
+def generate_ass_from_alignment(alignment, output_file="subtitles.ass", max_words_per_line=1):
     chars = alignment.characters
     starts = alignment.character_start_times_seconds
     ends = alignment.character_end_times_seconds
@@ -128,5 +128,31 @@ def add_audio_to_video(video_path, audio_path, output_path):
     except ffmpeg.Error as e:
         print("FFmpeg stderr:\n", e.stderr.decode())
         raise RuntimeError("ffmpeg failed to add audio to video")
+    
+def add_vignette(input_path, output_path, angle="PI/2", mode="forward"):
+    """
+    Adds a vignette effect to a video using ffmpeg-python.
+    """
+    try:
+        filter_str = f'vignette=angle={angle}:mode={mode}'
+
+        (
+            ffmpeg
+            .input(input_path)
+            .output(
+                output_path,
+                vf=filter_str,
+                vcodec='libx264',
+                acodec='aac',
+                audio_bitrate='192k',
+                strict='experimental'  # for aac if needed
+            )
+            .run(overwrite_output=True)
+        )
+
+        print(f"Vignette applied. Saved to {output_path}")
+    
+    except ffmpeg.Error as e:
+        print("❌ FFmpeg error:", str(e))
 
 

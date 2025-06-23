@@ -1,4 +1,6 @@
 from moviepy import AudioFileClip, VideoFileClip, afx, concatenate_videoclips, CompositeAudioClip
+from moviepy.video.fx import FadeIn, FadeOut
+import moviepy.video.fx as vfx
 
 def get_audio_duration(audio_path):
     audio = AudioFileClip(audio_path)
@@ -11,6 +13,42 @@ def save_concatenated_video(clips, output_path, fps=60):
     final.write_videofile(output_path, codec="libx264", audio_codec="aac", fps=fps)
     for clip in clips:
         clip.close()
+
+def save_concatenated_video_with_transitions(clips, output_path, fps=60, transition_duration=0.5):
+    if len(clips) <= 1:
+        # No transitions needed for single clip
+        final = clips[0] if clips else None
+    else:
+        # Create crossfade transitions between clips
+        transition_clips = []
+        
+        for i in range(len(clips)):
+            if i == 0:
+                # First clip - fade out at end only
+                clip = clips[i].with_effects([FadeOut(transition_duration)])
+            elif i == len(clips) - 1:
+                # Last clip - fade in at start only
+                clip = clips[i].with_effects([FadeIn(transition_duration)])
+            else:
+                # Middle clips - fade in at start and fade out at end
+                clip = clips[i].with_effects([
+                    FadeIn(transition_duration),
+                    FadeOut(transition_duration)
+                ])
+            
+            transition_clips.append(clip)
+        
+        # Concatenate with overlapping transitions
+        final = concatenate_videoclips(transition_clips, method="compose")
+    
+    if final:
+        final.write_videofile(output_path, codec="libx264", audio_codec="aac", fps=fps)
+    
+    # Clean up
+    for clip in clips:
+        clip.close()
+    if final:
+        final.close()
 
 def combine_video_with_audio(video_path, music_path, voiceover_path, output_path):
     """
