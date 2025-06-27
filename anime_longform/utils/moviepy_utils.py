@@ -66,24 +66,19 @@ def combine_video_with_audio(video_path, music_path, voiceover_path, output_path
         music = AudioFileClip(music_path)
         voiceover = AudioFileClip(voiceover_path)
 
-        # If music is longer than video, trim it
         if music.duration > video.duration:
             music = music.with_duration(video.duration)
         
-        # Adjust volumes (make music quieter to not overpower voiceover)
-        music = music.with_effects([afx.MultiplyVolume(0.3)])  # Reduce music volume to 30%
-        voiceover = voiceover.with_effects([afx.MultiplyVolume(1.0)])  # Keep voiceover at full volume
+        music = music.with_effects([afx.MultiplyVolume(0.3)])  
+        voiceover = voiceover.with_effects([afx.MultiplyVolume(1.0)])  
 
-        # Combine audio tracks
         final_audio = CompositeAudioClip([music, voiceover])
-        
-        # Set the mixed audio to the video
         final_clip = video.with_audio(final_audio)
 
-        # Write the final video
+        
         final_clip.write_videofile(output_path, codec="libx264", audio_codec="aac")
 
-        # Clean up
+        
         video.close()
         music.close()
         voiceover.close()
