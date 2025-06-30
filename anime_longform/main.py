@@ -2,7 +2,7 @@ from utils.openai_utils import generate_text
 from utils.elevenlabs_utils import generate_speech_with_timestamps, save_audio_from_base64
 from utils.ffmpeg_utils import *
 from utils.gdrive_utils import download_clips_matching_duration
-from utils.moviepy_utils import get_audio_duration, save_concatenated_video_with_transitions, combine_video_with_audio
+from utils.moviepy_utils import add_intro, add_outro, get_audio_duration, save_concatenated_video_with_transitions, combine_video_with_audio
 import os
 from dotenv import load_dotenv
 from dataclasses import dataclass
@@ -13,6 +13,7 @@ from pathlib import Path
 @dataclass
 class VideoConfig:
     """Configuration for video generation"""
+    profile_image: str = "images/bonsai.png"
     music_path: str = "music/track1.mp3"
     audio_path: str = "output/voiceover.mp3" 
     subtitle_path: str = "output/subtitles.ass"
@@ -86,10 +87,10 @@ class VideoProcessor:
         )
 
     def add_intro(self):
-        return
+        add_intro(self.config.profile_image, self.config.final_video_path)
     
     def add_outro(self):
-        return
+        add_outro(self.config.profile_image, self.config.final_video_path)
 
 class MotivationalVideoGenerator:
     """Main orchestrator class for generating motivational videos"""

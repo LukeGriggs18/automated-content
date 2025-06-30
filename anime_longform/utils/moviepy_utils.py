@@ -1,6 +1,13 @@
-from moviepy import AudioFileClip, VideoFileClip, afx, concatenate_videoclips, CompositeAudioClip
+from moviepy import AudioFileClip, VideoFileClip, afx, concatenate_videoclips, CompositeAudioClip, ImageClip
 from moviepy.video.fx import FadeIn, FadeOut
 import moviepy.video.fx as vfx
+
+def add_intro(image="images/bonsai.png"):
+    image = ImageClip("")
+    return
+
+def add_outro():
+    return
 
 def get_audio_duration(audio_path):
     audio = AudioFileClip(audio_path)
