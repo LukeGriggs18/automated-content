@@ -1,11 +1,27 @@
 import ffmpeg
 import traceback
+import string
 
 
 def generate_ass_from_alignment(alignment, output_file="subtitles.ass", max_words_per_line=1):
-    chars = alignment.characters
-    starts = alignment.character_start_times_seconds
-    ends = alignment.character_end_times_seconds
+    
+    def clean_alignment(alignment):
+        """remove all punctuation"""
+        cleaned_chars = []
+        cleaned_starts = []
+        cleaned_ends = []
+
+        for c, start, end in zip(alignment.characters,
+                                 alignment.character_start_times,
+                                 alignment.character_end_times):
+            if c not in string.punctuation:
+                cleaned_chars.append(c)
+                cleaned_starts.append(start)
+                cleaned_ends.append(end)
+
+        return cleaned_chars, cleaned_starts, cleaned_ends
+    
+    chars, starts, ends = clean_alignment(alignment)
 
     words = []
     current_word, word_start, word_end = "", None, None

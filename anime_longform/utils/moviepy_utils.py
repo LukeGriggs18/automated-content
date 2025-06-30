@@ -8,13 +8,13 @@ def get_audio_duration(audio_path):
     audio.close()
     return duration
 
-def save_concatenated_video(clips, output_path, fps=60):
+def save_concatenated_video(clips, output_path, fps=30):
     final = concatenate_videoclips(clips, method="compose")
     final.write_videofile(output_path, codec="libx264", audio_codec="aac", fps=fps)
     for clip in clips:
         clip.close()
 
-def save_concatenated_video_with_transitions(clips, output_path, fps=60, transition_duration=0.5):
+def save_concatenated_video_with_transitions(clips, output_path, fps=30, transition_duration=0.5):
     if len(clips) <= 1:
         # No transitions needed for single clip
         final = clips[0] if clips else None
